@@ -1,27 +1,32 @@
 module Main where
 
-main :: IO ()
-main = putStrLn "Hello, world!"
+import Control.Monad (mapM_)
 
-data Pacman
-  = Name String
-  | MaxScore Int
-  | Position (Int, Int)
-
+-- Definição dos tipos
 data Map
   = Road (Int, Int)
   | Wall (Int, Int)
-  | Gate (Int, Int)
-  | ScoredRoad (Int, Int)
+  deriving (Show)
 
-data Game
-  = Mapa Map
-  | Ghost (Int, Int)
-  | Pacman Pacman
-  | Score Int
-  | GameOver
+-- Função para criar uma matriz 36x28 de Map sem ScoredRoad
+criarMatriz :: [[Map]]
+criarMatriz = [[elemento (r, c) | c <- [0..27]] | r <- [0..35]]
+  where
+    elemento (r, c)
+      | r == 0 || r == 35 || c == 0 || c == 27 = Wall (r, c)  -- Bordas
+      | (r `mod` 2 == 0 && c `mod` 2 == 0) = Wall (r, c)     -- Padrão de paredes
+      | otherwise = Road (r, c)                             -- Caminhos internos
 
-  -- Cria Usuario tal função deve criar um usuário com um nome mas com a pontuação zerada como parâmetros.
+-- Função para converter um Map em uma letra/símbolo
+mapToSymbol :: Map -> String
+mapToSymbol (Road _) = "-"
+mapToSymbol (Wall _) = "|"
+
+-- Função para imprimir a matriz usando letras/símbolos
+printMatriz :: [[Map]] -> IO ()
+printMatriz = mapM_ (putStrLn . unwords . map mapToSymbol)
+
+ -- Cria Usuario tal função deve criar um usuário com um nome mas com a pontuação zerada como parâmetros.
 
   -- Instacia Fantasmas tal função deve criar um fantasma com uma posição específica dentro do mapa.
 
@@ -50,5 +55,8 @@ returnHighScore scores name =
 checkUser :: [(String, Int)] -> String -> Bool
 checkUser scores name = any (\(n, _) -> n == name) scores
 
--- criar mapa deve instanciar um mapa como uma matriz, o mapa só pode ser instanciado uma vez só
-
+-- Função principal
+main :: IO ()
+main = do
+  putStrLn "Mapa do Pacman:"
+  printMatriz criarMatriz
