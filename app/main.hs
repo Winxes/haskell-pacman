@@ -42,8 +42,8 @@ printMatrizComEntidades matriz entidades = mapM_ (putStrLn . unwords . map (most
       case filter (\(Entity _ _ _ (er, ec)) -> (er, ec) == (r, c)) ents of
         [] -> mapToSymbol (matriz !! r !! c)
         (Entity nome _ _ _ : _)
-          | nome == "Pacman" -> "\ESC[33mP\ESC[0m"  -- Representa o Pacman
-          | otherwise -> "\ESC[31mG\ESC[0m"  -- Representa os fantasmas
+          | nome == "Pacman" -> "\ESC[33m⚉\ESC[0m"  -- Representa o Pacman
+          | otherwise -> "\ESC[31m⬤\ESC[0m"  -- Representa os fantasmas
 
 -- Função para criar uma entidade com nome, posição e maxScore zerado
 criarEntidade :: String -> (Int, Int) -> Entity
@@ -100,13 +100,18 @@ randomMove matriz (r, c) = do
 -- Função para calcular o movimento mais próximo do Pacman
 moverFantasmaEmDirecao :: [[Map]] -> Entity -> Entity -> IO Entity
 moverFantasmaEmDirecao matriz fantasma pacman = do
-  let (fx, fy) = position fantasma
-      (px, py) = position pacman
-      movimentos = [(fx - 1, fy), (fx + 1, fy), (fx, fy - 1), (fx, fy + 1)]
-      movimentosValidos = filter (isMovimentoValido matriz) movimentos
-      melhorMovimento = minimumBy (comparing (\(mx, my) -> abs (mx - px) + abs (my - py))) movimentosValidos
-  return $ fantasma { position = melhorMovimento }
-
+  chance <- randomRIO (1 :: Int, 100 :: Int)  -- Especifica o tipo como Int
+  if chance <= 40  
+    then do
+      let (fx, fy) = position fantasma
+          (px, py) = position pacman
+          movimentos = [(fx - 1, fy), (fx + 1, fy), (fx, fy - 1), (fx, fy + 1)]
+          movimentosValidos = filter (isMovimentoValido matriz) movimentos
+          melhorMovimento = minimumBy (comparing (\(mx, my) -> abs (mx - px) + abs (my - py))) movimentosValidos
+      return $ fantasma { position = melhorMovimento }
+    else do
+      novaPos <- randomMove matriz (position fantasma)
+      return $ fantasma { position = novaPos }
 -- Função para mover os fantasmas em direção ao Pacman
 moverFantasmas :: [[Map]] -> [Entity] -> Entity -> IO [Entity]
 moverFantasmas matriz fantasmas pacman = mapM (\fantasma -> moverFantasmaEmDirecao matriz fantasma pacman) fantasmas
