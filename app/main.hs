@@ -69,12 +69,13 @@ moverPacman matriz pacman movimento =
         'a' -> (r, c - 1)  -- Mover para a esquerda
         'd' -> (r, c + 1)  -- Mover para a direita
         _   -> (r, c)      -- Movimento inválido
-      (novaMatriz, pontos) =
+      (novaMatriz, pontos, novaPosValida) =
         if isMovimentoValido matriz novaPos
-        then atualizarMapa matriz novaPos
-        else (matriz, 0)
-      pacmanAtualizado = pacman { position = novaPos, score = score pacman + pontos }
+        then let (m, p) = atualizarMapa matriz novaPos in (m, p, novaPos)
+        else (matriz, 0, (r, c)) -- Se movimento não for válido, mantém a posição e matriz atuais
+      pacmanAtualizado = pacman { position = novaPosValida, score = score pacman + pontos }
   in (novaMatriz, pacmanAtualizado)
+
 
 -- Função para verificar se a nova posição é válida (não é uma parede)
 isMovimentoValido :: [[Map]] -> (Int, Int) -> Bool
@@ -110,7 +111,7 @@ verificarColisao pacman fantasmas =
 
 -- Função para verificar se ainda há Road no mapa
 haRoadsRestantes :: [[Map]] -> Bool
-haRoadsRestantes = any (\linha -> any (== Road (0, 0)) linha) . concat
+haRoadsRestantes = any (any (\map -> case map of Road _ -> True; _ -> False))  -- Verifica se há algum Road restante
 
 -- Função principal de jogo
 main :: IO ()
