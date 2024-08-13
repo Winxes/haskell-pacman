@@ -16,12 +16,12 @@ data Entity = Entity
   , position   :: (Int, Int)
   } deriving (Show)
 
--- Função para criar uma matriz 36x28 de Map
+-- Função para criar uma matriz 24x21 de Map
 criarMatriz :: [[Map]]
-criarMatriz = [[elemento (r, c) | c <- [0..27]] | r <- [0..35]]
+criarMatriz = [[elemento (r, c) | c <- [0..20]] | r <- [0..23]]
   where
     elemento (r, c)
-      | r == 0 || r == 35 || c == 0 || c == 27 = Wall (r, c)  -- Bordas
+      | r == 0 || r == 23 || c == 0 || c == 20 = Wall (r, c)  -- Bordas
       | r `mod` 2 == 0 && c `mod` 2 == 0 = Wall (r, c)  -- Padrão de paredes
       | otherwise = Road (r, c)  -- Caminhos internos
 
@@ -35,7 +35,7 @@ mapToSymbol (Wall _) = "\ESC[34m🞓\ESC[0m"
 printMatrizComEntidades :: [[Map]] -> [Entity] -> IO ()
 printMatrizComEntidades matriz entidades = mapM_ (putStrLn . unwords . map (mostrarComEntidades entidades)) coordenadas
   where
-    coordenadas = [[(r, c) | c <- [0..27]] | r <- [0..35]]
+    coordenadas = [[(r, c) | c <- [0..20]] | r <- [0..23]]
     mostrarComEntidades ents (r, c) =
       case filter (\(Entity _ _ _ (er, ec)) -> (er, ec) == (r, c)) ents of
         [] -> mapToSymbol (matriz !! r !! c)
@@ -75,7 +75,6 @@ moverPacman matriz pacman movimento =
         else (matriz, 0, (r, c)) -- Se movimento não for válido, mantém a posição e matriz atuais
       pacmanAtualizado = pacman { position = novaPosValida, score = score pacman + pontos }
   in (novaMatriz, pacmanAtualizado)
-
 
 -- Função para verificar se a nova posição é válida (não é uma parede)
 isMovimentoValido :: [[Map]] -> (Int, Int) -> Bool
@@ -117,11 +116,11 @@ haRoadsRestantes = any (any (\map -> case map of Road _ -> True; _ -> False))  -
 main :: IO ()
 main = do
   let matriz = criarMatriz
-  let pacman = criarEntidade "Pacman" (19, 13)
-  let azul = criarEntidade "Azul" (14, 13)
-  let vermelho = criarEntidade "Vermelho" (13, 12)
-  let rosa = criarEntidade "Rosa" (13, 13)
-  let laranja = criarEntidade "Laranja" (13, 14)
+  let pacman = criarEntidade "Pacman" (11, 7)  -- Ajuste a posição inicial se necessário
+  let azul = criarEntidade "Azul" (7, 7)      -- Ajuste as posições dos fantasmas
+  let vermelho = criarEntidade "Vermelho" (6, 6)
+  let rosa = criarEntidade "Rosa" (6, 7)
+  let laranja = criarEntidade "Laranja" (6, 8)
 
   let entidades = [azul, vermelho, rosa, laranja]
 
