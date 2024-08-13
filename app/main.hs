@@ -1,6 +1,8 @@
 import Control.Monad (mapM_)
 import System.Console.ANSI (clearScreen)
 import System.Random (randomRIO)
+import Data.List (minimumBy)
+import Data.Ord (comparing)
 
 -- Definição dos tipos
 data Map
@@ -95,13 +97,19 @@ randomMove matriz (r, c) = do
       idx <- randomRIO (0, length movimentosValidos - 1)
       return (movimentosValidos !! idx)
 
--- Função para mover os fantasmas aleatoriamente
-moverFantasmas :: [[Map]] -> [Entity] -> IO [Entity]
-moverFantasmas matriz fantasmas = mapM (moverFantasma matriz) fantasmas
-  where
-    moverFantasma matriz fantasma = do
-      novaPos <- randomMove matriz (position fantasma)
-      return $ fantasma { position = novaPos }
+-- Função para calcular o movimento mais próximo do Pacman
+moverFantasmaEmDirecao :: [[Map]] -> Entity -> Entity -> IO Entity
+moverFantasmaEmDirecao matriz fantasma pacman = do
+  let (fx, fy) = position fantasma
+      (px, py) = position pacman
+      movimentos = [(fx - 1, fy), (fx + 1, fy), (fx, fy - 1), (fx, fy + 1)]
+      movimentosValidos = filter (isMovimentoValido matriz) movimentos
+      melhorMovimento = minimumBy (comparing (\(mx, my) -> abs (mx - px) + abs (my - py))) movimentosValidos
+  return $ fantasma { position = melhorMovimento }
+
+-- Função para mover os fantasmas em direção ao Pacman
+moverFantasmas :: [[Map]] -> [Entity] -> Entity -> IO [Entity]
+moverFantasmas matriz fantasmas pacman = mapM (\fantasma -> moverFantasmaEmDirecao matriz fantasma pacman) fantasmas
 
 -- Função para verificar se o Pacman encontrou algum fantasma
 verificarColisao :: Entity -> [Entity] -> Bool
@@ -137,7 +145,7 @@ gameLoop matriz pacman fantasmas = do
   putStrLn "Digite um movimento (w, s, a, d):"
   movimento <- getChar
   let (novaMatriz, novoPacman) = moverPacman matriz pacman movimento
-  fantasmasMovidos <- moverFantasmas novaMatriz fantasmas
+  fantasmasMovidos <- moverFantasmas novaMatriz fantasmas novoPacman
   if verificarColisao novoPacman fantasmasMovidos
     then putStrLn $ "Game Over! Pacman encontrou um fantasma. Pontuação final: " ++ show (score novoPacman)
     else if not (haRoadsRestantes novaMatriz)
