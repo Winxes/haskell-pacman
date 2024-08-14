@@ -137,6 +137,25 @@ verificarColisao pacman fantasmas =
 haRoadsRestantes :: [[Map]] -> Bool
 haRoadsRestantes = any (any (\map -> case map of Road _ -> True; _ -> False))  -- Verifica se há algum Road restante
 
+perguntarNome :: IO String
+perguntarNome = do
+  putStrLn "Digite seu nome:"
+  getLine
+
+
+salvarPontuacao :: Entity -> IO ()
+salvarPontuacao pacman = do
+  nome <- perguntarNome  
+  let pontos = score pacman
+  -- TODO: salvar apenas maior score do jogador
+  appendFile "pontuacoes.txt" (nome ++ ": " ++ show pontos ++ "\n")
+
+retornarPontuacoes :: IO ()
+retornarPontuacoes = do
+  conteudo <- readFile "pontuacoes.txt"
+  putStrLn conteudo
+
+
 -- Função principal de jogo
 main :: IO ()
 main = do
@@ -147,7 +166,6 @@ main = do
       fantasmaRosa = criarEntidade "Rosa" (6, 7)
       fantasmaLaranja = criarEntidade "Laranja" (6, 8)
       fantasmas = [fantasmaAzul, fantasmaVermelho, fantasmaRosa, fantasmaLaranja]
-  
   loopJogo matriz pacman fantasmas
 
 -- Função para o loop principal do jogo
@@ -159,9 +177,10 @@ loopJogo matriz pacman fantasmas = do
   putStrLn "Use W A S D para mover o Pacman."
 
   if verificarColisao pacman fantasmas
-    then putStrLn "Game Over! Você foi capturado por um fantasma."
+    then putStrLn "Game Over! Você foi capturado por um fantasma." >> salvarPontuacao pacman >> retornarPontuacoes
+    
     else if not (haRoadsRestantes matriz)
-      then putStrLn "Você venceu! Todos os pontos foram coletados."
+      then putStrLn "Você venceu! Todos os pontos foram coletados." >> salvarPontuacao pacman >> retornarPontuacoes
       else do
         movimento <- getChar
         let (novaMatriz, pacmanAtualizado) = moverPacman matriz pacman movimento
