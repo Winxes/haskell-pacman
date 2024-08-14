@@ -1,10 +1,11 @@
-import Control.Monad (mapM_)
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use lambda-case" #-}
+import Control.Monad ()
 import System.Console.ANSI (clearScreen)
 import System.Random (randomRIO)
-import Data.List (minimumBy)
+import Data.List ( minimumBy, isPrefixOf )
 import Data.Ord (comparing)
-import System.IO (withFile, IOMode(ReadMode, WriteMode), hGetContents, hPutStrLn, hPutStr)
-import Data.List (isPrefixOf)
+import System.IO (withFile, IOMode(ReadMode), hGetContents)
 
 
 -- Definição dos tipos
@@ -22,12 +23,19 @@ data Entity = Entity
   } deriving (Show)
 
 -- Função para criar uma matriz 24x21 de Map
+-- Função para criar uma matriz 24x21 de Map
 criarMatriz :: [[Map]]
 criarMatriz = [[elemento (r, c) | c <- [0..20]] | r <- [0..23]]
   where
     elemento (r, c)
       | r == 0 || r == 23 || c == 0 || c == 20 = Wall (r, c)  -- Bordas
-      | r `mod` 2 == 0 && c `mod` 2 == 0 = Wall (r, c)  -- Padrão de paredes
+      | r == 21 && c > 6 && c <= 13 = Wall (r,c)
+      | r == 16 && c > 6 && c <= 13 = Wall (r,c)
+      | r == 18 && c > 6 && c < 9 = Wall (r,c)
+      | r == 18 && c > 11 && c < 14 = Wall (r,c)
+      | r == 19 && c == 7 = Wall (r,c)
+      | r == 19 && c == 13 = Wall (r,c)
+      | r > 15 && r < 19 && c == 10 = Wall (r,c)
       | otherwise = Road (r, c)  -- Caminhos internos
 
 -- Função para converter um Map em uma letra/símbolo
@@ -46,11 +54,11 @@ printMatrizComEntidades matriz entidades = mapM_ (putStrLn . unwords . map (most
         [] -> mapToSymbol (matriz !! r !! c)
         (Entity nome _ _ _ : _)
           | nome == "Pacman" -> "\ESC[0m⚉\ESC[0m"  --
-          | nome == "Azul"    -> "\ESC[34m⬤\ESC[0m"  -- 
-          | nome == "Vermelho" -> "\ESC[31m⬤\ESC[0m"  -- 
-          | nome == "Rosa"    -> "\ESC[35m⬤\ESC[0m"  -- 
-          | nome == "Laranja" -> "\ESC[33m⬤\ESC[0m"  -- 
-          | otherwise -> "\ESC[31m⬤\ESC[0m"  -- 
+          | nome == "Azul"    -> "\ESC[34mᗣ\ESC[0m"  -- 
+          | nome == "Vermelho" -> "\ESC[31mᗣ\ESC[0m"  -- 
+          | nome == "Rosa"    -> "\ESC[35mᗣ\ESC[0m"  -- 
+          | nome == "Laranja" -> "\ESC[33mᗣ\ESC[0m"  -- 
+          | otherwise -> "\ESC[31mᗣ\ESC[0m"  -- 
 
 -- Função para criar uma entidade com nome, posição e maxScore zerado
 criarEntidade :: String -> (Int, Int) -> Entity
@@ -72,22 +80,22 @@ atualizarMapa matriz pos =
 moverPacman :: [[Map]] -> Entity -> Char -> ([[Map]], Entity)
 moverPacman matriz pacman movimento =
   let (r, c) = position pacman
-      novaPos = case movimento of
+      novaPosicao = case movimento of
         'w' -> (r - 1, c)  -- Mover para cima
         's' -> (r + 1, c)  -- Mover para baixo
         'a' -> (r, c - 1)  -- Mover para a esquerda
         'd' -> (r, c + 1)  -- Mover para a direita
-        _   -> (r, c)      
-      (novaMatriz, pontos, novaPosValida) =
-        if isMovimentoValido matriz novaPos
-        then let (m, p) = atualizarMapa matriz novaPos in (m, p, novaPos)
+        _   -> (r, c)
+      (novaMatriz, pontos, novaPosicaoValida) =
+        if verificaMovimentoValido matriz novaPosicao
+        then let (m, p) = atualizarMapa matriz novaPosicao in (m, p, novaPosicao)
         else (matriz, 0, (r, c)) -- Se movimento não for válido, mantém a posição e matriz atuais
-      pacmanAtualizado = pacman { position = novaPosValida, score = score pacman + pontos }
+      pacmanAtualizado = pacman { position = novaPosicaoValida, score = score pacman + pontos }
   in (novaMatriz, pacmanAtualizado)
 
 -- Função para verificar se a nova posição é válida (não é uma parede)
-isMovimentoValido :: [[Map]] -> (Int, Int) -> Bool
-isMovimentoValido matriz (r, c) =
+verificaMovimentoValido :: [[Map]] -> (Int, Int) -> Bool
+verificaMovimentoValido matriz (r, c) =
   case matriz !! r !! c of
     Road _ -> True
     EmptyRoad _ -> True  -- Permite mover sobre EmptyRoad
@@ -97,7 +105,7 @@ isMovimentoValido matriz (r, c) =
 randomMove :: [[Map]] -> (Int, Int) -> IO (Int, Int)
 randomMove matriz (r, c) = do
   let movimentos = [(r-1, c), (r+1, c), (r, c-1), (r, c+1)]
-  let movimentosValidos = filter (isMovimentoValido matriz) movimentos
+  let movimentosValidos = filter (verificaMovimentoValido matriz) movimentos
   if null movimentosValidos
     then return (r, c)  -- Se não houver movimentos válidos, permanece na posição atual
     else do
@@ -115,17 +123,17 @@ moverFantasmaEmDirecao matriz fantasma pacman = do
         "Laranja"  -> 30  -- 30% de chance de seguir o Pacman
         _          -> 40  -- Padrão 40% 
 
-  if chance <= precisao  
+  if chance <= precisao
     then do
       let (fx, fy) = position fantasma
           (px, py) = position pacman
           movimentos = [(fx - 1, fy), (fx + 1, fy), (fx, fy - 1), (fx, fy + 1)]
-          movimentosValidos = filter (isMovimentoValido matriz) movimentos
+          movimentosValidos = filter (verificaMovimentoValido matriz) movimentos
           melhorMovimento = minimumBy (comparing (\(mx, my) -> abs (mx - px) + abs (my - py))) movimentosValidos
       return $ fantasma { position = melhorMovimento }
     else do
-      novaPos <- randomMove matriz (position fantasma)
-      return $ fantasma { position = novaPos }
+      novaPosicao <- randomMove matriz (position fantasma)
+      return $ fantasma { position = novaPosicao }
 
 -- Função para mover os fantasmas em direção ao Pacman
 moverFantasmas :: [[Map]] -> [Entity] -> Entity -> IO [Entity]
@@ -133,12 +141,11 @@ moverFantasmas matriz fantasmas pacman = mapM (\fantasma -> moverFantasmaEmDirec
 
 -- Função para verificar se o Pacman encontrou algum fantasma
 verificarColisao :: Entity -> [Entity] -> Bool
-verificarColisao pacman fantasmas =
-  any (\f -> position pacman == position f) fantasmas
+verificarColisao pacman = any (\f -> position pacman == position f)
 
 -- Função para verificar se ainda há Road no mapa
-haRoadsRestantes :: [[Map]] -> Bool
-haRoadsRestantes = any (any (\map -> case map of Road _ -> True; _ -> False))  -- Verifica se há algum Road restante
+existePontosRestantes :: [[Map]] -> Bool
+existePontosRestantes = any (any (\m -> case m of Road _ -> True; _ -> False))  -- Verifica se há algum Road restante
 
 -- Pergunta o nome do jogador
 perguntarNome :: IO String
@@ -149,20 +156,19 @@ perguntarNome = do
 -- Salva a pontuação do jogador no arquivo pontuacoes.txt
 salvarPontuacao :: Entity -> IO ()
 salvarPontuacao pacman = do
-  
+
   nome <- perguntarNome
   let pontos = score pacman
-  
+
   -- Lê o conteúdo atual do arquivo
   novasLinhas <- withFile "pontuacoes.txt" ReadMode $ \handle -> do
     conteudo <- hGetContents handle
     let linhas = lines conteudo
     -- lê o arquivo completamente
     length linhas `seq` return (atualizarOuAdicionarPontuacao linhas nome pontos)
-  
+
   -- Sobrescrever o arquivo com o novo conteúdo
-  withFile "pontuacoes.txt" WriteMode $ \handle ->
-    hPutStr handle (unlines novasLinhas)
+  writeFile "pontuacoes.txt" (unlines novasLinhas)
 
 
 atualizarOuAdicionarPontuacao :: [String] -> String -> Int -> [String]
@@ -205,8 +211,8 @@ loopJogo matriz pacman fantasmas = do
 
   if verificarColisao pacman fantasmas
     then putStrLn "Game Over! Você foi capturado por um fantasma." >> salvarPontuacao pacman >> retornarPontuacoes
-    
-    else if not (haRoadsRestantes matriz)
+
+    else if not (existePontosRestantes matriz)
       then putStrLn "Você venceu! Todos os pontos foram coletados." >> salvarPontuacao pacman >> retornarPontuacoes
       else do
         movimento <- getChar
