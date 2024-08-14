@@ -23,19 +23,62 @@ data Entity = Entity
   } deriving (Show)
 
 -- Função para criar uma matriz 24x21 de Map
--- Função para criar uma matriz 24x21 de Map
 criarMatriz :: [[Map]]
 criarMatriz = [[elemento (r, c) | c <- [0..20]] | r <- [0..23]]
   where
     elemento (r, c)
       | r == 0 || r == 23 || c == 0 || c == 20 = Wall (r, c)  -- Bordas
-      | r == 21 && c > 6 && c <= 13 = Wall (r,c)
-      | r == 16 && c > 6 && c <= 13 = Wall (r,c)
-      | r == 18 && c > 6 && c < 9 = Wall (r,c)
-      | r == 18 && c > 11 && c < 14 = Wall (r,c)
-      | r == 19 && c == 7 = Wall (r,c)
-      | r == 19 && c == 13 = Wall (r,c)
-      | r > 15 && r < 19 && c == 10 = Wall (r,c)
+      | r == 21 && c > 6 && c <= 13 = Wall(r,c)
+      | r == 16 && c > 6 && c <= 13 = Wall(r,c)
+      | r == 18 && c > 6 && c < 9 = Wall(r,c)
+      | r == 18 && c > 11 && c < 14 = Wall(r,c)
+      | r == 19 && c == 7 = Wall(r,c)
+      | r == 19 && c == 13 = Wall(r,c)
+      | r > 15 && r < 19 && c == 10 = Wall(r,c)
+      | r > 18 && r < 21 && c > 15 && c < 18 = Wall(r,c)
+      | r > 18 && r < 21 && c > 2 && c < 5 = Wall(r,c)
+      | r == 17 && c > 2 && c < 6 = Wall(r,c)
+      | r == 17 && c > 14 && c < 18 = Wall(r,c)
+      | r > 13 && r < 17 && c == 3 = Wall(r,c)
+      | r > 13 && r < 17 && c == 17 = Wall(r,c)
+      | r == 15 && c == 2 = Wall (r,c)
+      | r == 15 && c == 18 = Wall (r,c)
+      | r > 8 && r < 16 && c == 5 = Wall(r,c)
+      | r > 8 && r < 16 && c == 15 = Wall(r,c)  
+      | r > 7 && r < 12 && c == 2 = Wall(r,c)
+      | r > 7 && r < 12 && c == 18 = Wall(r,c)
+      | r == 9 && c == 3 = Wall (r,c)
+      | r == 9 && c == 17 = Wall (r,c)
+      | r == 14 && c > 6 && c <= 13 = Wall (r,c)
+      | r > 10 && r < 14 && c == 7 = Wall(r,c)
+      | r > 10 && r < 14 && c == 13 = Wall(r,c)
+      | r == 8 && c > 6 && c <= 13 = Wall (r,c)
+      | r == 9 && c == 10 = Wall(r,c)
+      | r > 5 && r < 8 && c == 5 = Wall(r,c)
+      | r > 5 && r < 8 && c == 15 = Wall(r,c)
+      | r > 2 && r < 7 && c == 6 = Wall(r,c)
+      | r > 2 && r < 7 && c == 14 = Wall(r,c)
+      | r == 3 && c == 7 = Wall(r,c)
+      | r == 3 && c == 13 = Wall(r,c)
+      | r == 5 && c > 1 && c < 4 = Wall(r,c)
+      | r == 5 && c > 16 && c < 19 = Wall(r,c)
+      | r == 3 && c > 1 && c < 4 = Wall(r,c)
+      | r == 3 && c > 16 && c < 19 = Wall(r,c)
+      | r == 2 && c == 3 = Wall(r,c)
+      | r == 2 && c == 17 = Wall(r,c)
+      | r > 1 && r < 6 && c == 10 = Wall(r,c)
+      | r == 4 && c == 9 = Wall(r,c)
+      | r == 4 && c == 11 = Wall(r,c)
+      | r == 20 && c == 2 = Wall(r,c)
+      | r == 20 && c == 18 = Wall(r,c)
+      | r == 21 && c == 3 = Wall(r,c)
+      | r == 21 && c == 17 = Wall(r,c)
+      | r > 5 && r < 8 && c == 8 = Wall(r,c)
+      | r > 5 && r < 8 && c == 12 = Wall(r,c)
+      | r == 9 && c == 7 = Wall(r,c)
+      | r == 9 && c == 13 = Wall(r,c)
+      | r == 7 && c > 1 && c < 4 = Wall(r,c)
+      | r == 7 && c > 16 && c < 19 = Wall(r,c)
       | otherwise = Road (r, c)  -- Caminhos internos
 
 -- Função para converter um Map em uma letra/símbolo
@@ -53,7 +96,7 @@ printMatrizComEntidades matriz entidades = mapM_ (putStrLn . unwords . map (most
       case filter (\(Entity _ _ _ (er, ec)) -> (er, ec) == (r, c)) ents of
         [] -> mapToSymbol (matriz !! r !! c)
         (Entity nome _ _ _ : _)
-          | nome == "Pacman" -> "\ESC[0m⚉\ESC[0m"  --
+          | nome == "Pacman" -> "\ESC[93m⬤\ESC[0m"  --
           | nome == "Azul"    -> "\ESC[34mᗣ\ESC[0m"  -- 
           | nome == "Vermelho" -> "\ESC[31mᗣ\ESC[0m"  -- 
           | nome == "Rosa"    -> "\ESC[35mᗣ\ESC[0m"  -- 
@@ -117,10 +160,10 @@ moverFantasmaEmDirecao :: [[Map]] -> Entity -> Entity -> IO Entity
 moverFantasmaEmDirecao matriz fantasma pacman = do
   chance <- randomRIO (1 :: Int, 100 :: Int)
   let precisao = case entityName fantasma of
-        "Rosa"     -> 80  -- 80% de chance de seguir o Pacman
-        "Azul"     -> 60  -- 60% de chance de seguir o Pacman
-        "Vermelho" -> 50  -- 50% de chance de seguir o Pacman
-        "Laranja"  -> 30  -- 30% de chance de seguir o Pacman
+        "Rosa"     -> 100  -- 100% de chance de seguir o Pacman
+        "Azul"     -> 100  -- 100% de chance de seguir o Pacman
+        "Vermelho" -> 100  -- 100% de chance de seguir o Pacman
+        "Laranja"  -> 80  -- 80% de chance de seguir o Pacman
         _          -> 40  -- Padrão 40% 
 
   if chance <= precisao
@@ -193,11 +236,11 @@ retornarPontuacoes = do
 main :: IO ()
 main = do
   let matriz = criarMatriz
-      pacman = criarEntidade "Pacman" (11, 7)
-      fantasmaAzul = criarEntidade "Azul" (7, 7)
-      fantasmaVermelho = criarEntidade "Vermelho" (6, 6)
-      fantasmaRosa = criarEntidade "Rosa" (6, 7)
-      fantasmaLaranja = criarEntidade "Laranja" (6, 8)
+      pacman = criarEntidade "Pacman" (20, 10)
+      fantasmaAzul = criarEntidade "Azul" (12, 10)
+      fantasmaVermelho = criarEntidade "Vermelho" (11, 11)
+      fantasmaRosa = criarEntidade "Rosa" (11, 9)
+      fantasmaLaranja = criarEntidade "Laranja" (11, 10)
       fantasmas = [fantasmaAzul, fantasmaVermelho, fantasmaRosa, fantasmaLaranja]
   loopJogo matriz pacman fantasmas
 
