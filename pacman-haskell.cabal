@@ -24,7 +24,7 @@ license:            GPL-3.0-or-later
 license-file:       LICENSE
 
 -- The package author(s).
-author:             marcioantfilho
+author:             marcioantfilho, Gabriel-Cisneiros, GuilhermeBeltrao
 
 -- An email address to which users can send suggestions, bug reports, and patches.
 maintainer:         marcioantoni16@gmail.com
