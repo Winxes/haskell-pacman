@@ -42,8 +42,12 @@ printMatrizComEntidades matriz entidades = mapM_ (putStrLn . unwords . map (most
       case filter (\(Entity _ _ _ (er, ec)) -> (er, ec) == (r, c)) ents of
         [] -> mapToSymbol (matriz !! r !! c)
         (Entity nome _ _ _ : _)
-          | nome == "Pacman" -> "\ESC[33m⚉\ESC[0m"  -- Representa o Pacman
-          | otherwise -> "\ESC[31m⬤\ESC[0m"  -- Representa os fantasmas
+          | nome == "Pacman" -> "\ESC[0m⚉\ESC[0m"  --
+          | nome == "Azul"    -> "\ESC[34m⬤\ESC[0m"  -- 
+          | nome == "Vermelho" -> "\ESC[31m⬤\ESC[0m"  -- 
+          | nome == "Rosa"    -> "\ESC[35m⬤\ESC[0m"  -- 
+          | nome == "Laranja" -> "\ESC[33m⬤\ESC[0m"  -- 
+          | otherwise -> "\ESC[31m⬤\ESC[0m"  -- 
 
 -- Função para criar uma entidade com nome, posição e maxScore zerado
 criarEntidade :: String -> (Int, Int) -> Entity
@@ -57,7 +61,7 @@ atualizarMapa matriz pos =
       (novaRoad, pontos) = case roadOrWall of
         Road _ -> (EmptyRoad (r, c), 1)  -- Converte Road para EmptyRoad e dá 1 ponto
         Wall _ -> (roadOrWall, 0)        -- Não altera Wall
-        EmptyRoad _ -> (roadOrWall, 0)   -- Já é EmptyRoad, não dá ponto
+        EmptyRoad _ -> (roadOrWall, 0)   --
       matrizAtualizada = take r matriz ++ [take c (matriz !! r) ++ [novaRoad] ++ drop (c + 1) (matriz !! r)] ++ drop (r + 1) matriz
   in (matrizAtualizada, pontos)
 
@@ -70,7 +74,7 @@ moverPacman matriz pacman movimento =
         's' -> (r + 1, c)  -- Mover para baixo
         'a' -> (r, c - 1)  -- Mover para a esquerda
         'd' -> (r, c + 1)  -- Mover para a direita
-        _   -> (r, c)      -- Movimento inválido
+        _   -> (r, c)      
       (novaMatriz, pontos, novaPosValida) =
         if isMovimentoValido matriz novaPos
         then let (m, p) = atualizarMapa matriz novaPos in (m, p, novaPos)
@@ -97,11 +101,18 @@ randomMove matriz (r, c) = do
       idx <- randomRIO (0, length movimentosValidos - 1)
       return (movimentosValidos !! idx)
 
--- Função para calcular o movimento mais próximo do Pacman
+-- Função para calcular o movimento mais próximo do Pacman com diferentes precisões
 moverFantasmaEmDirecao :: [[Map]] -> Entity -> Entity -> IO Entity
 moverFantasmaEmDirecao matriz fantasma pacman = do
-  chance <- randomRIO (1 :: Int, 100 :: Int)  -- Especifica o tipo como Int
-  if chance <= 40  
+  chance <- randomRIO (1 :: Int, 100 :: Int)
+  let precisao = case entityName fantasma of
+        "Rosa"     -> 80  -- 80% de chance de seguir o Pacman
+        "Azul"     -> 60  -- 60% de chance de seguir o Pacman
+        "Vermelho" -> 50  -- 50% de chance de seguir o Pacman
+        "Laranja"  -> 30  -- 30% de chance de seguir o Pacman
+        _          -> 40  -- Padrão 40% 
+
+  if chance <= precisao  
     then do
       let (fx, fy) = position fantasma
           (px, py) = position pacman
@@ -112,6 +123,7 @@ moverFantasmaEmDirecao matriz fantasma pacman = do
     else do
       novaPos <- randomMove matriz (position fantasma)
       return $ fantasma { position = novaPos }
+
 -- Função para mover os fantasmas em direção ao Pacman
 moverFantasmas :: [[Map]] -> [Entity] -> Entity -> IO [Entity]
 moverFantasmas matriz fantasmas pacman = mapM (\fantasma -> moverFantasmaEmDirecao matriz fantasma pacman) fantasmas
@@ -129,30 +141,29 @@ haRoadsRestantes = any (any (\map -> case map of Road _ -> True; _ -> False))  -
 main :: IO ()
 main = do
   let matriz = criarMatriz
-  let pacman = criarEntidade "Pacman" (11, 7)  -- Ajuste a posição inicial se necessário
-  let azul = criarEntidade "Azul" (7, 7)      -- Ajuste as posições dos fantasmas
-  let vermelho = criarEntidade "Vermelho" (6, 6)
-  let rosa = criarEntidade "Rosa" (6, 7)
-  let laranja = criarEntidade "Laranja" (6, 8)
+      pacman = criarEntidade "Pacman" (11, 7)
+      fantasmaAzul = criarEntidade "Azul" (7, 7)
+      fantasmaVermelho = criarEntidade "Vermelho" (6, 6)
+      fantasmaRosa = criarEntidade "Rosa" (6, 7)
+      fantasmaLaranja = criarEntidade "Laranja" (6, 8)
+      fantasmas = [fantasmaAzul, fantasmaVermelho, fantasmaRosa, fantasmaLaranja]
+  
+  loopJogo matriz pacman fantasmas
 
-  let entidades = [azul, vermelho, rosa, laranja]
+-- Função para o loop principal do jogo
+loopJogo :: [[Map]] -> Entity -> [Entity] -> IO ()
+loopJogo matriz pacman fantasmas = do
+  clearScreen
+  printMatrizComEntidades matriz (pacman : fantasmas)
+  putStrLn $ "Pontuação: " ++ show (score pacman)
+  putStrLn "Use W A S D para mover o Pacman."
 
-  -- Loop principal do jogo
-  gameLoop matriz pacman entidades
-
--- Loop principal do jogo
-gameLoop :: [[Map]] -> Entity -> [Entity] -> IO ()
-gameLoop matriz pacman fantasmas = do
-  clearScreen -- Limpa o terminal
-  let todasEntidades = pacman : fantasmas
-  printMatrizComEntidades matriz todasEntidades
-  putStrLn $ "Pontuação: " ++ show (score pacman)  -- Exibe a pontuação
-  putStrLn "Digite um movimento (w, s, a, d):"
-  movimento <- getChar
-  let (novaMatriz, novoPacman) = moverPacman matriz pacman movimento
-  fantasmasMovidos <- moverFantasmas novaMatriz fantasmas novoPacman
-  if verificarColisao novoPacman fantasmasMovidos
-    then putStrLn $ "Game Over! Pacman encontrou um fantasma. Pontuação final: " ++ show (score novoPacman)
-    else if not (haRoadsRestantes novaMatriz)
-         then putStrLn $ "Parabéns! Todas as estradas foram limpas. Pontuação final: " ++ show (score novoPacman)
-         else gameLoop novaMatriz novoPacman fantasmasMovidos
+  if verificarColisao pacman fantasmas
+    then putStrLn "Game Over! Você foi capturado por um fantasma."
+    else if not (haRoadsRestantes matriz)
+      then putStrLn "Você venceu! Todos os pontos foram coletados."
+      else do
+        movimento <- getChar
+        let (novaMatriz, pacmanAtualizado) = moverPacman matriz pacman movimento
+        fantasmasAtualizados <- moverFantasmas novaMatriz fantasmas pacmanAtualizado
+        loopJogo novaMatriz pacmanAtualizado fantasmasAtualizados
