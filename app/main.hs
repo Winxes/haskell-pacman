@@ -3,6 +3,9 @@ import System.Console.ANSI (clearScreen)
 import System.Random (randomRIO)
 import Data.List (minimumBy)
 import Data.Ord (comparing)
+import System.IO (withFile, IOMode(ReadMode, WriteMode), hGetContents, hPutStrLn, hPutStr)
+import Data.List (isPrefixOf)
+
 
 -- Definição dos tipos
 data Map
@@ -137,24 +140,48 @@ verificarColisao pacman fantasmas =
 haRoadsRestantes :: [[Map]] -> Bool
 haRoadsRestantes = any (any (\map -> case map of Road _ -> True; _ -> False))  -- Verifica se há algum Road restante
 
+-- Pergunta o nome do jogador
 perguntarNome :: IO String
 perguntarNome = do
   putStrLn "Digite seu nome:"
   getLine
 
-
+-- Salva a pontuação do jogador no arquivo pontuacoes.txt
 salvarPontuacao :: Entity -> IO ()
 salvarPontuacao pacman = do
-  nome <- perguntarNome  
+  
+  nome <- perguntarNome
   let pontos = score pacman
-  -- TODO: salvar apenas maior score do jogador
-  appendFile "pontuacoes.txt" (nome ++ ": " ++ show pontos ++ "\n")
+  
+  -- Lê o conteúdo atual do arquivo
+  novasLinhas <- withFile "pontuacoes.txt" ReadMode $ \handle -> do
+    conteudo <- hGetContents handle
+    let linhas = lines conteudo
+    -- lê o arquivo completamente
+    length linhas `seq` return (atualizarOuAdicionarPontuacao linhas nome pontos)
+  
+  -- Sobrescrever o arquivo com o novo conteúdo
+  withFile "pontuacoes.txt" WriteMode $ \handle ->
+    hPutStr handle (unlines novasLinhas)
 
+
+atualizarOuAdicionarPontuacao :: [String] -> String -> Int -> [String]
+atualizarOuAdicionarPontuacao [] nome pontos = [nome ++ ": " ++ show pontos]
+-- Atualiza a pontuação se o nome já existir, caso contrário, adiciona uma nova linha
+atualizarOuAdicionarPontuacao (linha:linhas) nome pontos
+  | nome `isPrefixOf` linha =
+    -- Atualiza a pontuação se o novo valor for maior
+      let scoreAtual = read (drop (length nome + 2) linha) :: Int
+      in if pontos > scoreAtual
+         then (nome ++ ": " ++ show pontos) : linhas
+         else linha : linhas
+  | otherwise = linha : atualizarOuAdicionarPontuacao linhas nome pontos
+
+-- retorna as pontuações salvas
 retornarPontuacoes :: IO ()
 retornarPontuacoes = do
   conteudo <- readFile "pontuacoes.txt"
   putStrLn conteudo
-
 
 -- Função principal de jogo
 main :: IO ()
